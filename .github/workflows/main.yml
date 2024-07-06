@@ -15,23 +15,30 @@ jobs:
     - name: Set up Node.js
       uses: actions/setup-node@v3
       with:
-        node-version: '14'
+        node-version: '18'  # Updated to Node.js 18
+        
+    - name: Create package.json
+      run: |
+        echo '{"name": "screenshot-action", "version": "1.0.0", "private": true}' > package.json
         
     - name: Install dependencies
       run: |
-        npm install puppeteer
+        npm install puppeteer@19.11.1  # Specific version that works with Node.js 18
         
     - name: Capture screenshot
       run: |
         node -e "
         const puppeteer = require('puppeteer');
         (async () => {
-          const browser = await puppeteer.launch();
+          const browser = await puppeteer.launch({args: ['--no-sandbox']});
           const page = await browser.newPage();
           await page.goto('https://example.com');
           await page.screenshot({path: 'screenshot.png'});
           await browser.close();
-        })()
+        })().catch(err => {
+          console.error(err);
+          process.exit(1);
+        });
         "
         
     - name: Upload screenshot
