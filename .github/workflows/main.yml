@@ -1,0 +1,41 @@
+name: Capture Website Screenshot
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  capture_screenshot:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Set up Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '14'
+        
+    - name: Install dependencies
+      run: |
+        npm install puppeteer
+        
+    - name: Capture screenshot
+      run: |
+        node -e "
+        const puppeteer = require('puppeteer');
+        (async () => {
+          const browser = await puppeteer.launch();
+          const page = await browser.newPage();
+          await page.goto('https://example.com');
+          await page.screenshot({path: 'screenshot.png'});
+          await browser.close();
+        })()
+        "
+        
+    - name: Upload screenshot
+      uses: actions/upload-artifact@v3
+      with:
+        name: website-screenshot
+        path: screenshot.png
