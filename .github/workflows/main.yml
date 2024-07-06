@@ -10,43 +10,32 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v2
     
     - name: Set up Node.js
-      uses: actions/setup-node@v3
+      uses: actions/setup-node@v2
       with:
         node-version: '18'
+      env:
+        PUPPETEER_SKIP_CHROMIUM_DOWNLOAD: 'true'
         
-    - name: Create package.json
+    - name: Create package.json and install dependencies
       run: |
         echo '{"name": "captcha-solver-action", "version": "1.0.0", "private": true}' > package.json
-        
-    - name: Install dependencies
-      run: |
-        npm install puppeteer puppeteer-extra puppeteer-extra-plugin-stealth axios
+        npm install puppeteer-extra puppeteer-extra-plugin-stealth axios
         
     - name: Create CAPTCHA solver script
       run: |
         cat << 'EOD' > captcha_solver.js
-        const { executablePath } = require("puppeteer");
         const puppeteer = require("puppeteer-extra");
         const StealthPlugin = require("puppeteer-extra-plugin-stealth");
         puppeteer.use(StealthPlugin());
 
         async function run() {
           const browser = await puppeteer.launch({
-            headless: true,
-            args: [
-              "--no-sandbox",
-              "--disable-setuid-sandbox",
-              "--allow-external-pages",
-              "--allow-third-party-modules",
-              "--data-reduction-proxy-http-proxies",
-              "--disable-web-security",
-              "--disable-features=IsolateOrigins,site-per-process,SitePerProcess",
-              "--flag-switches-begin --disable-site-isolation-trials --flag-switches-end",
-            ],
-            executablePath: executablePath(),
+            args: ['--no-sandbox', '--disable-setuid-sandbox', '--font-render-hinting=none'],
+            executablePath: process.env.PUPPETEER_EXEC_PATH,
+            headless: false,
           });
 
           const page = await browser.newPage();
@@ -71,7 +60,7 @@ jobs:
                 recaptchaStatus.innerText.includes("You are verified")
               );
             },
-            { timeout: 60000 },
+            { timeout: 120000 }, // Increased timeout to 2 minutes
           );
 
           // Take a screenshot after CAPTCHA is solved
@@ -85,10 +74,15 @@ jobs:
         EOD
         
     - name: Run CAPTCHA solver and capture screenshot
-      run: node captcha_solver.js
+      uses: beemi/puppeteer-headful@master
+      env:
+        CI: 'true'
+        DISPLAY: :99
+      with:
+        args: node captcha_solver.js
         
     - name: Upload screenshot
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v2
       with:
         name: captcha-solved-screenshot
         path: screenshot.png
