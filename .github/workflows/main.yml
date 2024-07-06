@@ -27,64 +27,62 @@ jobs:
         
     - name: Create CAPTCHA solver script
       run: |
-        cat << EOF > captcha_solver.js
-        $(cat << 'EOD'
-const { executablePath } = require("puppeteer");
-const puppeteer = require("puppeteer-extra");
-const StealthPlugin = require("puppeteer-extra-plugin-stealth");
-puppeteer.use(StealthPlugin());
+        cat << 'EOD' > captcha_solver.js
+        const { executablePath } = require("puppeteer");
+        const puppeteer = require("puppeteer-extra");
+        const StealthPlugin = require("puppeteer-extra-plugin-stealth");
+        puppeteer.use(StealthPlugin());
 
-async function run() {
-  const browser = await puppeteer.launch({
-    headless: true,
-    args: [
-      "--no-sandbox",
-      "--disable-setuid-sandbox",
-      "--allow-external-pages",
-      "--allow-third-party-modules",
-      "--data-reduction-proxy-http-proxies",
-      "--disable-web-security",
-      "--disable-features=IsolateOrigins,site-per-process,SitePerProcess",
-      "--flag-switches-begin --disable-site-isolation-trials --flag-switches-end",
-    ],
-    executablePath: executablePath(),
-  });
+        async function run() {
+          const browser = await puppeteer.launch({
+            headless: true,
+            args: [
+              "--no-sandbox",
+              "--disable-setuid-sandbox",
+              "--allow-external-pages",
+              "--allow-third-party-modules",
+              "--data-reduction-proxy-http-proxies",
+              "--disable-web-security",
+              "--disable-features=IsolateOrigins,site-per-process,SitePerProcess",
+              "--flag-switches-begin --disable-site-isolation-trials --flag-switches-end",
+            ],
+            executablePath: executablePath(),
+          });
 
-  const page = await browser.newPage();
-  await page.goto("https://patrickhlauke.github.io/recaptcha/", {
-    waitUntil: "networkidle0",
-  });
+          const page = await browser.newPage();
+          await page.goto("https://patrickhlauke.github.io/recaptcha/", {
+            waitUntil: "networkidle0",
+          });
 
-  // Solver code (the rest of the provided code goes here)
-  await page.evaluate(() => {
-    // ... (paste the entire content of the evaluate function here)
-  });
+          // Solver code
+          await page.evaluate(() => {
+            // Paste the entire content of the evaluate function here
+            // ...
+          });
 
-  // Wait for the CAPTCHA to be solved
-  await page.waitForFunction(
-    () => {
-      const recaptchaStatus = document
-        .querySelector('iframe[src*="api2/anchor"]')
-        .contentWindow.document.querySelector("#recaptcha-accessible-status");
-      return (
-        recaptchaStatus &&
-        recaptchaStatus.innerText.includes("You are verified")
-      );
-    },
-    { timeout: 60000 },
-  );
+          // Wait for the CAPTCHA to be solved
+          await page.waitForFunction(
+            () => {
+              const recaptchaStatus = document
+                .querySelector('iframe[src*="api2/anchor"]')
+                .contentWindow.document.querySelector("#recaptcha-accessible-status");
+              return (
+                recaptchaStatus &&
+                recaptchaStatus.innerText.includes("You are verified")
+              );
+            },
+            { timeout: 60000 },
+          );
 
-  // Take a screenshot after CAPTCHA is solved
-  await page.screenshot({ path: "screenshot.png" });
-  console.log("Screenshot taken after CAPTCHA is solved.");
+          // Take a screenshot after CAPTCHA is solved
+          await page.screenshot({ path: "screenshot.png" });
+          console.log("Screenshot taken after CAPTCHA is solved.");
 
-  await browser.close();
-}
+          await browser.close();
+        }
 
-run();
-EOD
-        )
-        EOF
+        run();
+        EOD
         
     - name: Run CAPTCHA solver and capture screenshot
       run: node captcha_solver.js
