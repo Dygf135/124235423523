@@ -1,4 +1,4 @@
-name: Capture Website Screenshot (Headful Mode)
+name: Solve reCAPTCHA and Capture Screenshot
 
 on:
   push:
@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  capture_screenshot:
+  solve_captcha:
     runs-on: ubuntu-latest
     
     steps:
@@ -19,33 +19,73 @@ jobs:
         
     - name: Install dependencies
       run: |
-        sudo apt-get update
-        sudo apt-get install -y xvfb
-        echo '{"name": "screenshot-action", "version": "1.0.0", "private": true}' > package.json
-        npm install puppeteer@19.11.1
-        
-    - name: Capture screenshot in headful mode
+        npm init -y
+        npm install puppeteer puppeteer-extra puppeteer-extra-plugin-stealth axios
+
+    - name: Solve reCAPTCHA and take screenshot
       run: |
-        xvfb-run --auto-servernum --server-args="-screen 0 1280x960x24" node -e "
-        const puppeteer = require('puppeteer');
-        (async () => {
+        cat <<EOT > solve_captcha.js
+        const { executablePath } = require("puppeteer");
+        const puppeteer = require("puppeteer-extra");
+        const StealthPlugin = require("puppeteer-extra-plugin-stealth");
+        puppeteer.use(StealthPlugin());
+
+        async function run() {
           const browser = await puppeteer.launch({
             headless: false,
-            args: ['--no-sandbox', '--disable-setuid-sandbox']
+            devtools: true,
+            args: [
+              "--no-sandbox",
+              "--disable-setuid-sandbox",
+              "--allow-external-pages",
+              "--allow-third-party-modules",
+              "--data-reduction-proxy-http-proxies",
+              "--disable-web-security",
+              "--enable-automation",
+              "--disable-features=IsolateOrigins,site-per-process,SitePerProcess",
+              "--flag-switches-begin --disable-site-isolation-trials --flag-switches-end",
+            ],
+            executablePath: executablePath(),
           });
+
           const page = await browser.newPage();
-          await page.setViewport({width: 1280, height: 960});
-          await page.goto('https://example.com');
-          await page.screenshot({path: 'screenshot.png'});
+          await page.goto("https://patrickhlauke.github.io/recaptcha/", {
+            waitUntil: "networkidle0",
+          });
+
+          // Paste the entire script content here
+          await page.evaluate(() => {
+            // ... (paste the entire content of the evaluate function here)
+          });
+
+          // Wait for the CAPTCHA to be solved
+          await page.waitForFunction(
+            () => {
+              const recaptchaStatus = document
+                .querySelector('iframe[src*="api2/anchor"]')
+                .contentWindow.document.querySelector("#recaptcha-accessible-status");
+              return (
+                recaptchaStatus &&
+                recaptchaStatus.innerText.includes("You are verified")
+              );
+            },
+            { timeout: 60000 },
+          );
+
+          // Take a screenshot after CAPTCHA is solved
+          await page.screenshot({ path: 'screenshot.png' });
+          console.log("Screenshot taken after CAPTCHA is solved.");
+
           await browser.close();
-        })().catch(err => {
-          console.error(err);
-          process.exit(1);
-        });
-        "
-        
+        }
+
+        run();
+        EOT
+
+        xvfb-run --auto-servernum --server-args="-screen 0 1280x960x24" node solve_captcha.js
+
     - name: Upload screenshot
       uses: actions/upload-artifact@v3
       with:
-        name: website-screenshot
+        name: captcha-solved-screenshot
         path: screenshot.png
