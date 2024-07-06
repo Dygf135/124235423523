@@ -45,8 +45,7 @@ jobs:
 
           // Solver code
           await page.evaluate(() => {
-            // Paste the entire content of the evaluate function here
-            // ...
+            // The entire content of your evaluate function will be pasted here
           });
 
           // Wait for the CAPTCHA to be solved
