@@ -1,0 +1,34 @@
+name: Puppeteer CAPTCHA Solver
+
+on:
+  push:
+    branches:
+      - main  # Adjust this to your main branch name
+
+jobs:
+  run_puppeteer:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v2
+      with:
+        node-version: '14'  # or any supported version
+
+    - name: Install dependencies
+      run: |
+        npm install puppeteer puppeteer-extra puppeteer-extra-plugin-stealth axios
+
+    - name: Run Puppeteer script
+      run: |
+        node path/to/your/script.js  # Adjust the path to your JavaScript file
+      env:
+        PUPPETEER_EXECUTABLE_PATH: './node_modules/puppeteer/.local-chromium/linux-901912/chrome-linux/chrome'
+
+    - name: Upload screenshot artifact
+      uses: actions/upload-artifact@v2
+      with:
+        name: captcha-screenshot
+        path: screenshot.png
